@@ -55,7 +55,7 @@ func main() {
 		}
 	}
 
-	// 依赖注入（暂时传入 nil）
+	// 依赖注入（暂时传入 nil Kafka redis功能暂时禁用）
 	orderRepo := repository.NewOrderRepo(db)
 	inventoryRepo := repository.NewInventoryRepo(db)
 	orderService := service.NewOrderService(orderRepo, inventoryRepo, nil)
