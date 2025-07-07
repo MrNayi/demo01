@@ -3,15 +3,15 @@ package model
 
 import "time"
 
-// Order 订单模型（string作为基础类型，slice存储商品列表）
+// Order 订单模型
 type Order struct {
-	ID           string      `gorm:"type:varchar(32);primaryKey" json:"id"`
-	UserID       string      `gorm:"type:varchar(32)" json:"user_id"`
-	Items        string      `gorm:"type:text" json:"items"` // 存储JSON格式的商品列表
-	TotalAmount  float64     `json:"total_amount"`
-	Status       int         `json:"status"`
-	CreatedAt    time.Time   `json:"created_at"`
-	InventoryMap map[int]int `gorm:"-" json:"-"` // 内存中用map暂存商品ID与库存的映射
+	ID          string    `gorm:"type:varchar(32);primaryKey" json:"id"`
+	UserID      string    `gorm:"type:varchar(32)" json:"user_id"`
+	Items       string    `gorm:"type:text" json:"items"` // 存储JSON格式的商品列表
+	TotalAmount float64   `json:"total_amount"`
+	Status      string    `gorm:"size:20;default:'pending'" json:"status"` // pending, paid, shipped, completed, cancelled
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Inventory 库存模型

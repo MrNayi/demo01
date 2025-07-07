@@ -22,6 +22,7 @@ func NewInventoryRepo(db *gorm.DB) *InventoryRepo {
 // DecreaseStock 扣减库存（乐观锁 + 自旋重试）
 // 1.上下文  2.商品id 3.库存 -- 参数
 func (r *InventoryRepo) DecreaseStock(ctx context.Context, productID int, quantity int) error {
+	// TODO 这里可以考虑实现RWLock
 	// 乐观锁参数
 	const (
 		maxRetries = 8                     // 最大重试次数（增加重试次数）

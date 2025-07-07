@@ -8,7 +8,6 @@ import (
 type Config struct {
 	MySQLDSN  string // MySQL连接字符串
 	RedisAddr string // Redis地址
-	KafkaAddr string // Kafka地址
 	Port      string // 服务端口
 }
 
@@ -17,7 +16,6 @@ func Load() *Config {
 	return &Config{
 		MySQLDSN:  getEnv("MYSQL_DSN", "root:Azspigot1996@tcp(14.103.163.34:3306)/nayidemo?charset=utf8mb4&parseTime=True&loc=Local"),
 		RedisAddr: getEnv("REDIS_ADDR", "localhost:6379"),
-		KafkaAddr: getEnv("KAFKA_ADDR", "localhost:9092"),
 		Port:      getEnv("PORT", "8080"),
 	}
 }
