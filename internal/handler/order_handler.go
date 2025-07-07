@@ -11,6 +11,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Response 统一响应结构
+type Response struct {
+	Code    int         `json:"code"`    // 状态码
+	Message string      `json:"message"` // 响应消息
+	Data    interface{} `json:"data"`    // 响应数据
+}
+
+// 状态码常量
+const (
+	CodeSuccess  = 200
+	CodeError    = 500
+	CodeInvalid  = 400
+	CodeNotFound = 404
+)
+
 type OrderHandler struct {
 	orderService *service.OrderService
 }
@@ -25,52 +40,101 @@ func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
 	return &OrderHandler{orderService: orderService}
 }
 
+// responseSuccess 成功响应封装
+func (h *OrderHandler) responseSuccess(c *gin.Context, message string, data interface{}) {
+	c.JSON(http.StatusOK, Response{
+		Code:    CodeSuccess,
+		Message: message,
+		Data:    data,
+	})
+}
+
+// responseError 错误响应封装
+func (h *OrderHandler) responseError(c *gin.Context, code int, message string) {
+	c.JSON(http.StatusOK, Response{
+		Code:    code,
+		Message: message,
+		Data:    nil,
+	})
+}
+
 // CreateOrderHandler 创建订单接口
 func (h *OrderHandler) CreateOrderHandler(c *gin.Context) {
+	// 1. 参数绑定和验证
 	var req CreateOrderReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 打印详细错误信息
+		// 打印详细错误信息用于调试
 		fmt.Printf("绑定JSON失败: %v, Content-Type: %s\n", err, c.GetHeader("Content-Type"))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.responseError(c, CodeInvalid, "请求参数错误: "+err.Error())
 		return
 	}
 
+	// 2. 参数业务验证
+	if len(req.Items) == 0 {
+		h.responseError(c, CodeInvalid, "订单商品不能为空")
+		return
+	}
+
+	// 3. 调用 Service 层处理业务逻辑
 	order, err := h.orderService.CreateOrder(c.Request.Context(), req.UserID, req.Items)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.responseError(c, CodeError, "创建订单失败: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": order})
+	// 4. 封装并返回成功响应
+	h.responseSuccess(c, "订单创建成功", order)
 }
 
 // GetAllOrdersHandler 分页查询所有订单
 func (h *OrderHandler) GetAllOrdersHandler(c *gin.Context) {
-	// 获取分页后 还需要将分页的string转换为int
+	// 1. 参数获取和转换
 	pageStr, pageSizeStr := c.Query("page"), c.Query("page_size")
 	page, _ := strconv.Atoi(pageStr)
 	pageSize, _ := strconv.Atoi(pageSizeStr)
+
+	// 2. 参数验证和默认值设置
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100 // 限制最大分页大小
+	}
+
+	// 3. 调用 Service 层查询数据
 	orders, err := h.orderService.GetAllOrders(c.Request.Context(), page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.responseError(c, CodeError, "查询订单列表失败: "+err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": orders})
+
+	// 4. 封装并返回响应
+	h.responseSuccess(c, "查询订单列表成功", gin.H{
+		"orders":    orders,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 // GetOrderHandler 查询订单接口
 func (h *OrderHandler) GetOrderHandler(c *gin.Context) {
+	// 1. 参数获取和验证
 	orderID := c.Param("id")
 	if orderID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "订单ID不能为空"})
+		h.responseError(c, CodeInvalid, "订单ID不能为空")
 		return
 	}
 
+	// 2. 调用 Service 层查询订单
 	order, err := h.orderService.GetOrder(c.Request.Context(), orderID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "订单不存在"})
+		h.responseError(c, CodeNotFound, "订单不存在")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": order})
+	// 3. 封装并返回响应
+	h.responseSuccess(c, "查询订单成功", order)
 }
