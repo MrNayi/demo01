@@ -20,8 +20,10 @@ func NewInventoryRepo(db *gorm.DB) *InventoryRepo {
 
 // 核心操作 执行商品扣减
 // DecreaseStock 扣减库存（乐观锁 + 自旋重试）
-// 1.上下文  2.商品id 3.库存
+// 1.上下文  2.商品id 3.库存 -- 参数
 func (r *InventoryRepo) DecreaseStock(ctx context.Context, productID int, quantity int) error {
+	// TODO 这里可以考虑实现RWLock
+	// 乐观锁参数
 	const (
 		maxRetries = 8                     // 最大重试次数（增加重试次数）
 		baseDelay  = 5 * time.Millisecond  // 基础重试间隔
@@ -48,7 +50,7 @@ func (r *InventoryRepo) DecreaseStock(ctx context.Context, productID int, quanti
 				})
 
 			if result.RowsAffected == 0 {
-				return gorm.ErrRecordNotFound // 版本冲突
+				return gorm.ErrRecordNotFound // 版本错误 说明被修改
 			}
 
 			return result.Error
@@ -59,7 +61,7 @@ func (r *InventoryRepo) DecreaseStock(ctx context.Context, productID int, quanti
 			return err
 		}
 
-		// 版本冲突，使用指数退避策略重试
+		// 版本冲突 需要重试
 		if attempt < maxRetries-1 {
 			// 指数退避：延迟时间随重试次数增加
 			delay := baseDelay * time.Duration(1<<attempt)
