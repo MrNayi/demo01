@@ -7,6 +7,7 @@ import (
 	"demo01/internal/handler"
 	"demo01/internal/repository"
 	"demo01/internal/service"
+	"demo01/internal/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
@@ -23,17 +24,16 @@ func main() {
 		panic("连接数据库失败: " + err.Error())
 	}
 
-	// TODO: 初始化Redis
-	// 初始化Redis（暂时禁用 否则项目无法启动）
-	// util.InitRedis(cfg.RedisAddr)
+	// 初始化Redis
+	util.InitRedis(cfg.RedisAddr, cfg.RedisPwd)
 
 	// 初始化数据库
 	if err := database.InitDatabase(db); err != nil {
 		panic("数据库初始化失败: " + err.Error())
 	}
 
-	// 依赖注入（暂时传入 nil Kafka redis功能暂时禁用）
-	orderRepo := repository.NewOrderRepo(db)
+	// 依赖注入
+	orderRepo := repository.NewOrderRepo(db, util.RedisClient)
 	inventoryRepo := repository.NewInventoryRepo(db)
 	productRepo := repository.NewProductRepo(db)
 
@@ -42,9 +42,14 @@ func main() {
 
 	orderHandler := handler.NewOrderHandler(orderService)
 	productHandler := handler.NewProductHandler(productService)
+	healthHandler := handler.NewHealthHandler()
 
 	// 初始化Gin
 	r := gin.Default()
+
+	// 健康检查路由
+	r.GET("/health", healthHandler.HealthCheck)
+
 	// 路由注册
 	// 订单相关路由 orders
 	{

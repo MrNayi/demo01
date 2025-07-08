@@ -1,0 +1,40 @@
+# Git 相关
+.git
+.gitignore
+
+# 文档
+README.md
+docs/
+*.md
+
+# 测试文件
+test/
+*_test.go
+test_*.json
+test_*.sh
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 构建产物
+main
+demo01
+
+# 环境配置
+.env
+.env.local
+
+# 图片资源
+pictures/
+
+# 其他
+*.bak
+*.backup 
