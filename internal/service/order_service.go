@@ -20,6 +20,8 @@ type OrderService struct {
 	orderRepo     *repository.OrderRepo
 	inventoryRepo *repository.InventoryRepo
 	localCache    sync.Map // 本地缓存 使用Sync.Map本地缓存 加速订单查询
+	// 读多写少的场景操作map 可以直接使用sync map 使用简单性能也比较好
+	// 读写较为均衡的场景 或者写较多 可以使用RWLock 好处是更加灵活地对map实现加锁 缺点是需要手动管理 并且有死锁风险
 }
 
 // NewOrderService 创建订单服务实例

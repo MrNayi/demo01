@@ -122,3 +122,60 @@ func (h *ProductHandler) GetStockHandler(c *gin.Context) {
 		"stock":      stock,
 	})
 }
+
+// RecommendProductsHandler 猜你喜欢商品推荐接口
+func (h *ProductHandler) RecommendProductsHandler(c *gin.Context) {
+	idsStr := c.Query("ids")
+	var ids []int
+	if idsStr != "" {
+		idStrs := util.SplitAndTrim(idsStr, ",")
+		for _, s := range idStrs {
+			id, err := strconv.Atoi(s)
+			if err != nil {
+				util.ResponseUtil.InvalidParams(c, "商品ID格式错误: "+s)
+				return
+			}
+			ids = append(ids, id)
+		}
+	}
+
+	ctx := c.Request.Context()
+	products, err := h.productService.RecommendProducts(ctx, ids)
+	if err != nil {
+		util.ResponseUtil.ServerError(c, "推荐商品失败: "+err.Error())
+		return
+	}
+
+	util.ResponseUtil.Success(c, "推荐商品成功 (WaitGroup并发)", gin.H{
+		"mode":     "waitgroup",
+		"products": products,
+	})
+}
+
+// RecommendProductsSerialHandler 串行方式批量查询商品详情（仅测试用）
+func (h *ProductHandler) RecommendProductsSerialHandler(c *gin.Context) {
+	idsStr := c.Query("ids")
+	var ids []int
+	if idsStr != "" {
+		idStrs := util.SplitAndTrim(idsStr, ",")
+		for _, s := range idStrs {
+			id, err := strconv.Atoi(s)
+			if err != nil {
+				util.ResponseUtil.InvalidParams(c, "商品ID格式错误: "+s)
+				return
+			}
+			ids = append(ids, id)
+		}
+	}
+
+	ctx := c.Request.Context()
+	products, err := h.productService.RecommendProductsSerial(ctx, ids)
+	if err != nil {
+		util.ResponseUtil.ServerError(c, "串行推荐商品失败: "+err.Error())
+		return
+	}
+	util.ResponseUtil.Success(c, "串行推荐商品成功 (Serial)", gin.H{
+		"mode":     "serial",
+		"products": products,
+	})
+}

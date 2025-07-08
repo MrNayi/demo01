@@ -85,3 +85,84 @@ func (s *ProductService) DecreaseStock(ctx context.Context, productID, quantity 
 func (s *ProductService) GetStock(ctx context.Context, productID int) (int, error) {
 	return s.productRepo.GetStock(ctx, productID)
 }
+
+// RecommendProducts 批量推荐商品
+// 使用wait group 并发查询每个商品的信息 统一聚合结果
+func (s *ProductService) RecommendProducts(ctx context.Context, ids []int) ([]*model.Product, error) {
+	if len(ids) == 0 {
+		// 默认推荐前10个商品
+		products, err := s.productRepo.GetAll(ctx, 1, 10)
+		if err != nil {
+			return nil, err
+		}
+		result := make([]*model.Product, 0, len(products))
+		for i := range products {
+			result = append(result, &products[i])
+		}
+		return result, nil
+	}
+
+	// 并发拉取每个商品详情
+	result := make([]*model.Product, len(ids))
+	errList := make([]error, len(ids))
+	// 通过waitgroup并发查询每一个商品详情 最后汇聚成一个推荐页
+	// 比如我们的推荐页默认为10个商品 那么并发查找就能够让原来的10个商品查询时间 变为最慢的一个
+	// 这是我想到的适合waitgroup的场景
+	var wg sync.WaitGroup
+
+	for i, id := range ids {
+		wg.Add(1)
+		go func(idx, pid int) {
+			defer wg.Done()
+			// 先查本地缓存
+			if cacheValue, exists := s.localCache.Load(pid); exists {
+				if cache, ok := cacheValue.(*model.Product); ok {
+					result[idx] = cache
+					return
+				}
+			}
+			// 查数据库
+			product, err := s.productRepo.GetByID(ctx, pid)
+			if err != nil {
+				errList[idx] = err
+				return
+			}
+			result[idx] = product
+			// 写入本地缓存
+			s.localCache.Store(pid, product)
+		}(i, id)
+	}
+	wg.Wait()
+
+	// 过滤掉未查到的商品（如有）
+	finalResult := make([]*model.Product, 0, len(ids))
+	for i, p := range result {
+		if p != nil && errList[i] == nil {
+			finalResult = append(finalResult, p)
+		}
+	}
+	return finalResult, nil
+}
+
+// RecommendProductsSerial 串行方式批量查询商品详情
+func (s *ProductService) RecommendProductsSerial(ctx context.Context, ids []int) ([]*model.Product, error) {
+	var products []*model.Product
+	if len(ids) == 0 {
+		// 默认推荐前10个商品
+		all, err := s.productRepo.GetAll(ctx, 1, 10)
+		if err != nil {
+			return nil, err
+		}
+		for i := range all {
+			products = append(products, &all[i])
+		}
+		return products, nil
+	}
+	for _, id := range ids {
+		product, err := s.GetProduct(ctx, id)
+		if err == nil && product != nil {
+			products = append(products, product)
+		}
+	}
+	return products, nil
+}

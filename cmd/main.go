@@ -64,6 +64,8 @@ func main() {
 		r.GET("/products", productHandler.GetAllProductsHandler)
 		r.GET("/products/:id", productHandler.GetProductHandler)
 		r.GET("/products/:id/stock", productHandler.GetStockHandler)
+		r.GET("/products/recommend", productHandler.RecommendProductsHandler)
+		r.GET("/products/recommend_serial", productHandler.RecommendProductsSerialHandler)
 	}
 
 	// TODO:用户相关路由 users
