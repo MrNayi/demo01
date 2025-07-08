@@ -72,3 +72,13 @@ func (r *ProductRepo) GetStock(ctx context.Context, productID int) (int, error) 
 	}
 	return product.Stock, nil
 }
+
+// GetProductsByIDs 根据一组商品ID批量查询商品详情
+func (r *ProductRepo) GetProductsByIDs(ctx context.Context, ids []int) ([]model.Product, error) {
+	if len(ids) == 0 {
+		return []model.Product{}, nil
+	}
+	var products []model.Product
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&products).Error
+	return products, err
+}

@@ -2,6 +2,7 @@ package util
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -64,3 +65,15 @@ func (h *ResponseHelper) NotFound(c *gin.Context, message string) {
 
 // 全局响应助手实例
 var ResponseUtil = NewResponseHelper()
+
+// SplitAndTrim 按分隔符分割字符串并去除每个元素的空格
+func SplitAndTrim(s, sep string) []string {
+	var res []string
+	for _, part := range strings.Split(s, sep) {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			res = append(res, trimmed)
+		}
+	}
+	return res
+}
